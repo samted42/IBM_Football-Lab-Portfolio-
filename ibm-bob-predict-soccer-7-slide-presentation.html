@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>IBM Bob Predict Soccer — 7-Slide Presentation</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  font-family:-apple-system,"Segoe UI",system-ui,sans-serif;
+  background:#03061a;color:#fff;
+  overflow:hidden;height:100vh;width:100vw;
+}
+
+/* ── EACH SLIDE IS A FULL-PAGE SECTION ── */
+/* Uses :target to show the active slide */
+.slide{
+  display:none;
+  position:fixed;inset:0;
+  flex-direction:column;
+  justify-content:flex-end;
+  padding:70px 5vw 90px;
+  overflow-y:auto;
+}
+/* Slide 1 shown by default (no target) */
+.slide:first-of-type,
+.slide:target{display:flex}
+/* When ANY slide is targeted, hide slide 1 */
+body:has(.slide:target) .slide:first-of-type:not(:target){display:none}
+
+/* ── WORLD CUP BACKGROUND ── */
+.bg{
+  position:fixed;inset:0;z-index:0;
+  background:#030820;overflow:hidden;
+  pointer-events:none;
+}
+.globe{
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-60%);
+  width:min(480px,70vw);height:min(480px,70vw);
+  border-radius:50%;
+  background:radial-gradient(ellipse at 40% 35%,
+    rgba(100,220,255,.82) 0%,rgba(50,150,255,.55) 25%,
+    rgba(0,80,200,.4) 55%,rgba(0,30,100,.25) 75%,transparent 100%);
+  box-shadow:0 0 60px 28px rgba(0,150,255,.30),0 0 130px 60px rgba(0,100,255,.14);
+}
+.globe-ring{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-60%);
+  width:min(560px,82vw);height:min(560px,82vw);
+  border-radius:50%;
+  border:1.5px solid rgba(0,200,255,.22);
+}
+.pitch{
+  position:absolute;bottom:0;left:0;right:0;height:22%;
+  background:linear-gradient(to top,#1a4a0a 0%,#1d5c0d 45%,transparent 100%);
+}
+.ball{
+  position:absolute;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#fff 0%,#e0e0e0 50%,#999 100%);
+  box-shadow:0 2px 12px rgba(0,0,0,.6);
+}
+.ovl{
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(160deg,rgba(2,6,32,.1) 0%,rgba(2,6,32,.58) 45%,rgba(2,6,32,.93) 100%);
+}
+.flags-arc{
+  position:absolute;top:3%;left:50%;transform:translateX(-50%);
+  display:flex;gap:7px;flex-wrap:wrap;justify-content:center;max-width:80%;
+}
+.flags-arc span{font-size:clamp(18px,2.5vw,28px);filter:drop-shadow(0 2px 8px rgba(0,0,0,.85))}
+
+/* ── SLIDE CONTENT (above overlay) ── */
+.cnt{position:relative;z-index:2;max-width:900px;width:100%}
+.cnt-center{margin:auto;text-align:center}
+
+/* ── TOPBAR ── */
+.topbar{
+  position:fixed;top:0;left:0;right:0;z-index:500;
+  background:rgba(2,4,20,.97);
+  border-bottom:1px solid rgba(255,215,0,.3);
+  padding:8px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.tb-logo{font-size:13px;font-weight:800;color:gold;letter-spacing:.06em}
+.tb-sub{font-size:11px;color:rgba(255,255,255,.4)}
+
+/* ── LOOM STRIP ── */
+.lstrip{
+  position:fixed;top:40px;left:0;right:0;z-index:499;
+  background:rgba(29,110,245,.18);
+  border-bottom:1px solid rgba(29,110,245,.3);
+  padding:4px 16px;font-size:11px;color:#93c5fd;text-align:center;
+}
+.lstrip strong{color:#fff}
+
+/* ── NAV BUTTONS ── */
+.nav{
+  position:fixed;bottom:22px;right:22px;z-index:500;
+  display:flex;gap:10px;
+}
+.nav a{
+  background:rgba(255,255,255,.13);
+  border:1.5px solid rgba(255,255,255,.28);
+  color:#fff;font-size:13px;font-weight:700;
+  padding:10px 22px;border-radius:8px;
+  text-decoration:none;display:inline-block;
+}
+.nav a.prim{background:#1d6ef5;border-color:#3b82f6}
+
+/* ── DOTS ── */
+.dotrow{
+  position:fixed;bottom:32px;left:50%;transform:translateX(-50%);
+  display:flex;gap:8px;z-index:500;
+}
+.dotrow a{
+  display:block;width:9px;height:9px;
+  border-radius:50%;background:rgba(255,255,255,.3);
+  text-decoration:none;transition:background .2s,transform .2s;
+}
+.dotrow a.on{background:gold;transform:scale(1.5)}
+
+/* ── BADGE ── */
+.badge{
+  display:inline-block;font-size:10px;font-weight:800;
+  letter-spacing:.12em;text-transform:uppercase;
+  padding:4px 14px;border-radius:20px;margin-bottom:14px;
+}
+.bk-gold  {background:gold;color:#1a1200}
+.bk-blue  {background:#1d6ef5;color:#fff}
+.bk-purple{background:#7c3aed;color:#fff}
+.bk-green {background:#15803d;color:#fff}
+.bk-teal  {background:#0d9488;color:#fff}
+.bk-red   {background:#b91c1c;color:#fff}
+
+/* ── HEADLINE ── */
+.h1{
+  font-size:clamp(22px,4vw,48px);font-weight:900;
+  line-height:1.15;color:#fff;margin-bottom:16px;
+  text-shadow:0 3px 24px rgba(0,0,0,.95);
+}
+.h1 em{color:gold;font-style:normal}
+
+/* ── SCRIPT BOX ── */
+.sbox{
+  background:rgba(2,8,50,.88);
+  border-left:4px solid gold;
+  border-radius:0 12px 12px 0;
+  padding:16px 20px;
+  font-size:clamp(12.5px,1.5vw,15px);
+  line-height:1.85;color:#dde8ff;max-width:880px;
+}
+.sbox .dir{
+  display:block;font-size:11px;font-style:italic;
+  color:#fcd34d;margin-bottom:8px;
+  background:rgba(252,211,77,.10);padding:4px 10px;border-radius:4px;
+}
+.sbox strong{color:#fff}
+.sbox em{color:gold;font-style:italic}
+.vtag{
+  display:inline-block;background:rgba(29,110,245,.22);
+  border:1px solid rgba(29,110,245,.5);border-radius:4px;
+  padding:2px 8px;font-size:10px;font-weight:700;
+  color:#93c5fd;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;
+}
+
+/* ── BULLETS ── */
+.blist{list-style:none;margin:0 0 14px;padding:0}
+.blist li{
+  padding:7px 0 7px 28px;position:relative;
+  font-size:clamp(13px,1.55vw,15px);color:#e8eeff;
+  border-bottom:1px solid rgba(255,255,255,.07);line-height:1.6;
+}
+.blist li:last-child{border-bottom:none}
+.blist li::before{content:'▸';position:absolute;left:0;color:gold;font-size:14px;top:8px}
+.blist li strong{color:#fff}
+.blist li em{color:gold;font-style:normal}
+
+/* ── TWO COLUMNS ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+@media(max-width:560px){.two-col{grid-template-columns:1fr}}
+.col-box{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:14px 16px}
+.col-label{font-size:10px;font-weight:800;color:gold;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.col-val{font-size:13px;color:#e8eeff;line-height:1.55}
+
+/* ── STATS PILLS ── */
+.stats{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.pill{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:10px 16px;text-align:center}
+.pv{font-size:clamp(18px,2.3vw,24px);font-weight:900;color:gold}
+.pl{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
+
+/* ── BENEFIT CARDS ── */
+.bcards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:600px){.bcards{grid-template-columns:1fr 1fr}}
+.bcard{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:12px 14px}
+.bcard-ico{font-size:20px;margin-bottom:5px}
+.bcard-t{font-size:12px;font-weight:700;color:gold;margin-bottom:4px}
+.bcard-d{font-size:11px;color:#cbd5e1;line-height:1.5}
+
+/* ── PRESENTER BOX ── */
+.pbox{
+  display:inline-block;background:rgba(2,8,50,.82);
+  border:1.5px solid rgba(255,215,0,.4);border-radius:12px;
+  padding:16px 28px;margin-bottom:20px;text-align:left;max-width:520px;
+}
+.pbox-label{font-size:11px;color:gold;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.pbox-name{font-size:clamp(16px,2.5vw,22px);font-weight:900;color:#fff;margin-bottom:4px}
+.pbox-role{font-size:13px;color:#94a3b8;margin-bottom:10px}
+.pbox-stack{font-size:12px;color:#e8eeff;line-height:1.7}
+
+/* ── PULSE HINT ── */
+.pulse{font-size:12px;color:rgba(255,255,255,.5);margin-top:22px}
+</style>
+</head>
+<body>
+
+<!-- SHARED BACKGROUND (always visible) -->
+<div class="bg">
+  <div class="globe">
+    <div style="position:absolute;width:32%;height:22%;top:30%;left:20%;background:rgba(20,160,80,.55);border-radius:40%;transform:rotate(-15deg)"></div>
+    <div style="position:absolute;width:22%;height:30%;top:20%;left:55%;background:rgba(20,160,80,.45);border-radius:40%;transform:rotate(10deg)"></div>
+    <div style="position:absolute;width:18%;height:18%;top:55%;left:38%;background:rgba(20,160,80,.4);border-radius:50%"></div>
+  </div>
+  <div class="globe-ring"></div>
+  <div class="pitch"></div>
+  <div class="ball" style="width:54px;height:54px;top:12%;left:7%"></div>
+  <div class="ball" style="width:38px;height:38px;top:55%;right:8%"></div>
+  <div class="ball" style="width:62px;height:62px;bottom:8%;left:14%"></div>
+  <div class="ball" style="width:42px;height:42px;bottom:12%;right:20%"></div>
+  <div class="ball" style="width:28px;height:28px;bottom:6%;right:38%"></div>
+  <div class="ball" style="width:34px;height:34px;top:18%;right:22%"></div>
+  <div class="flags-arc">
+    <span>🇧🇷</span><span>🇦🇷</span><span>🇩🇪</span><span>🇫🇷</span>
+    <span>🇪🇸</span><span>🇬🇧</span><span>🇯🇵</span><span>🇲🇦</span>
+    <span>🇵🇹</span><span>🇺🇸</span><span>🇳🇱</span><span>🇸🇳</span>
+  </div>
+</div>
+<div class="ovl"></div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <span class="tb-logo">⚽ IBM Bob Predict Soccer — World Cup 2026</span>
+  <span class="tb-sub">Click NEXT ▶ to advance slides</span>
+</div>
+
+<!-- LOOM STRIP -->
+<div class="lstrip">
+  🎬 Record in <strong>Loom.com</strong> → Screen + Camera → Read the
+  <span style="color:gold">gold script</span> on each slide → Stop → Copy public link → Paste in IBM Challenge submission
+</div>
+
+<!-- ════════════════════════════════════════
+     SLIDE 1 — INTRODUCTION / TITLE
+════════════════════════════════════════ -->
+<section class="slide" id="s1">
+  <div class="cnt cnt-center">
+    <div class="badge bk-gold">IBM SkillsBuild · AI Builders Challenge 2025</div>
+    <div class="h1" style="font-size:clamp(28px,5.5vw,60px);text-align:center">
+      ⚽ IBM Bob Predict<br><em>Soccer Matches</em>
+    </div>
+    <div style="font-size:clamp(14px,1.8vw,19px);opacity:.82;margin-bottom:24px">
+      World Cup 2026 · AI-Powered Match Outcome Prediction<br>
+      Built with IBM Bob · scikit-learn · Python · Streamlit
+    </div>
+    <div class="pbox">
+      <div class="pbox-label">Presented by</div>
+      <div class="pbox-name">samted42</div>
+      <div class="pbox-role">IBM SkillsBuild AI Builders Challenge 2025</div>
+      <div class="pbox-stack">
+        🤖 <strong style="color:gold">IBM Bob</strong> — AI Coding Assistant<br>
+        🐍 Python · pandas · scikit-learn · Streamlit · joblib<br>
+        📊 49,000+ matches · 215 FIFA nations · 150 years of data
+      </div>
+    </div>
+    <div class="stats" style="justify-content:center">
+      <div class="pill"><div class="pv">49K+</div><div class="pl">Matches</div></div>
+      <div class="pill"><div class="pv">215</div><div class="pl">FIFA Teams</div></div>
+      <div class="pill"><div class="pv">52%</div><div class="pl">Accuracy</div></div>
+      <div class="pill"><div class="pv">150yr</div><div class="pl">History</div></div>
+      <div class="pill"><div class="pv">IBM Bob</div><div class="pl">AI Built</div></div>
+    </div>
+    <div class="pulse">▶ Click NEXT to begin your 3-minute presentation</div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SLIDE 2 — PURPOSE
+════════════════════════════════════════ -->
+<section class="slide" id="s2">
+  <div class="cnt">
+    <div class="badge bk-blue">⏱ 0:00 – 0:35 · Slide 2 of 7 — Introduction &amp; Purpose</div>
+    <div class="h1">Who I Am &amp; <em>Why I Built This</em></div>
+    <div class="sbox" style="margin-bottom:12px">
+      <span class="vtag">🎙 Male Voice · Read aloud</span>
+      <span class="dir">👉 Face camera. Steady, confident tone.</span>
+      "Good day. My name is <strong>samted42</strong>, and I am proud to present
+      <em>IBM Bob Predict Soccer Matches</em> — built as part of the
+      <strong>IBM SkillsBuild AI Builders Challenge 2025</strong>.
+      This entire project was powered by <strong>IBM Bob</strong> — IBM's AI coding assistant —
+      which wrote every line of Python code based on my natural language descriptions."
+    </div>
+    <div style="font-size:12px;color:gold;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">📌 Purpose of This Project</div>
+    <ul class="blist">
+      <li><strong>Predict football match outcomes</strong> using 150+ years of international results — giving any fan data-driven World Cup 2026 insights.</li>
+      <li><strong>Demonstrate IBM Bob's power</strong> — AI coding assistants enable non-programmers to build real, production-quality ML applications.</li>
+      <li><strong>Democratise sports analytics</strong> — put professional club tools into the hands of students, fans, and analysts — for free.</li>
+      <li><strong>Learn by doing</strong> — each of 10 lab tasks was prompted to IBM Bob, which generated working Python code step by step.</li>
+      <li><strong>Showcase IBM SkillsBuild</strong> as a real-world learning platform that bridges AI education with practical application.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SLIDE 3 — REASON BEHIND THE APP
+════════════════════════════════════════ -->
+<section class="slide" id="s3">
+  <div class="cnt">
+    <div class="badge bk-purple">⏱ 0:35 – 1:05 · Slide 3 of 7 — The Reason Behind This App</div>
+    <div class="h1">The Reason<br><em>Behind This Application</em></div>
+    <div class="sbox" style="margin-bottom:12px">
+      <span class="vtag">🎙 Male Voice · Read aloud</span>
+      <span class="dir">👉 Speak with purpose. This is the emotional "why".</span>
+      "Football is the world's most popular sport — yet accurate prediction tools
+      are locked behind expensive platforms used only by professional clubs.
+      <strong>I wanted to change that.</strong>
+      With the <strong>FIFA World Cup 2026</strong> — 48 teams across USA, Canada, Mexico —
+      billions of fans deserve better than guesswork.
+      With <strong>IBM Bob</strong>, building this was finally possible for anyone."
+    </div>
+    <div style="font-size:12px;color:gold;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px">📌 Key Reasons — Bullet Points</div>
+    <ul class="blist">
+      <li><strong>Football prediction is hard</strong> — injuries, tactics, form, home advantage all affect outcomes. Data science cuts through the noise.</li>
+      <li><strong>World Cup 2026 is historic</strong> — 48 teams, 3 host nations, billions of global viewers demanding insights.</li>
+      <li><strong>Existing tools are inaccessible</strong> — professional prediction platforms cost thousands. This app is free and open.</li>
+      <li><strong>IBM Bob removes the barrier</strong> — describe what you need in plain English; Bob writes the code. No ML experience required.</li>
+      <li><strong>Learning in action</strong> — proves that AI-assisted development is the future of software education.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SLIDE 4 — BENEFITS
+════════════════════════════════════════ -->
+<section class="slide" id="s4">
+  <div class="cnt">
+    <div class="badge bk-green">⏱ 1:05 – 1:35 · Slide 4 of 7 — Benefits</div>
+    <div class="h1">Key Benefits of<br><em>IBM Bob Predict Soccer</em></div>
+    <div class="bcards">
+      <div class="bcard"><div class="bcard-ico">🌍</div><div class="bcard-t">Accessible to All</div><div class="bcard-d">No data science background needed. Any fan predicts any match in seconds.</div></div>
+      <div class="bcard"><div class="bcard-ico">📊</div><div class="bcard-t">Data-Driven</div><div class="bcard-d">150+ years of real match history — not opinions or gut feelings.</div></div>
+      <div class="bcard"><div class="bcard-ico">🤖</div><div class="bcard-t">IBM Bob Powered</div><div class="bcard-d">100% generated by IBM Bob — proves AI tools work for non-coders.</div></div>
+      <div class="bcard"><div class="bcard-ico">🏆</div><div class="bcard-t">World Cup Ready</div><div class="bcard-d">All 215 FIFA-eligible nations — every 2026 World Cup team covered.</div></div>
+      <div class="bcard"><div class="bcard-ico">⚡</div><div class="bcard-t">Instant Predictions</div><div class="bcard-d">Select two teams, click Predict — probabilities in under a second.</div></div>
+      <div class="bcard"><div class="bcard-ico">🔬</div><div class="bcard-t">Honest Science</div><div class="bcard-d">Time-based split. No data leakage. Tested only on unseen future matches.</div></div>
+    </div>
+    <div class="sbox" style="font-size:clamp(12px,1.4vw,14px)">
+      <span class="vtag">🎙 Male Voice · Read aloud</span>
+      <span class="dir">👉 Point to each card as you speak. Keep energy up.</span>
+      "The benefits are clear: <em>accessible to everyone</em>, backed by
+      <strong>real data</strong>, covering all <strong>215 FIFA nations</strong>,
+      delivering predictions <em>instantly</em>. And it was built entirely by
+      <strong>IBM Bob</strong> — democratising AI development for anyone, anywhere."
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SLIDE 5 — HOW IT WORKS
+════════════════════════════════════════ -->
+<section class="slide" id="s5">
+  <div class="cnt">
+    <div class="badge bk-teal">⏱ 1:35 – 2:05 · Slide 5 of 7 — How It Works</div>
+    <div class="h1">The Machine Learning<br><em>Pipeline — 10 Tasks with IBM Bob</em></div>
+    <div class="stats">
+      <div class="pill"><div class="pv">49,016</div><div class="pl">Matches</div></div>
+      <div class="pill"><div class="pv">8</div><div class="pl">Features</div></div>
+      <div class="pill"><div class="pv">200</div><div class="pl">RF Trees</div></div>
+      <div class="pill"><div class="pv">52%</div><div class="pl">Accuracy</div></div>
+      <div class="pill"><div class="pv">10 Tasks</div><div class="pl">IBM Bob Built</div></div>
+    </div>
+    <ul class="blist" style="margin-bottom:10px">
+      <li><strong>Tasks 1–2:</strong> Install libraries · Download 49,000+ match dataset (1872–2026)</li>
+      <li><strong>Task 3:</strong> Explore tournaments, top teams, decade-by-decade match distribution</li>
+      <li><strong>Task 4:</strong> Engineer 8 features — win rate, goals, recent form (last 10), venue, tournament. <em>Zero data leakage</em></li>
+      <li><strong>Task 5:</strong> Time-based split — train on matches before 2018, test on 2018–2026</li>
+      <li><strong>Task 6:</strong> Train Random Forest (200 trees, depth 12). Result: <em>52% accuracy vs 45% baseline</em></li>
+      <li><strong>Tasks 7–8:</strong> Save model · Test predict_match() — Brazil vs Argentina, Germany vs Brazil</li>
+      <li><strong>Tasks 9–10:</strong> Write Streamlit web app · Launch at http://localhost:8501</li>
+    </ul>
+    <div class="sbox" style="font-size:clamp(12px,1.4vw,13.5px)">
+      <span class="vtag">🎙 Male Voice · Read aloud</span>
+      <span class="dir">👉 Show the Jupyter notebook scrolling on screen.</span>
+      "Ten tasks — all generated by <strong>IBM Bob</strong>.
+      From downloading the dataset to a live interactive web app,
+      built in <em>under 90 minutes</em>."
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SLIDE 6 — LIVE DEMO
+════════════════════════════════════════ -->
+<section class="slide" id="s6">
+  <div class="cnt">
+    <div class="badge bk-red">⏱ 2:05 – 2:40 · Slide 6 of 7 — Live Demo</div>
+    <div class="h1">Live Demo:<br><em>Brazil 🇧🇷 vs Argentina 🇦🇷</em></div>
+    <div class="two-col">
+      <div class="col-box">
+        <div class="col-label">Match 1 — Brazil vs Argentina</div>
+        <div class="col-val">
+          🇧🇷 Brazil win: <strong style="color:gold">39.75%</strong><br>
+          🤝 Draw: <strong style="color:gold">20.87%</strong><br>
+          🇦🇷 Argentina win: <strong style="color:gold">39.38%</strong><br>
+          <span style="font-size:11px;color:#94a3b8">→ Near coin toss — correct for this rivalry</span>
+        </div>
+      </div>
+      <div class="col-box">
+        <div class="col-label">Match 2 — Germany vs Brazil</div>
+        <div class="col-val">
+          🇩🇪 Germany win: <strong style="color:gold">61.78%</strong><br>
+          🤝 Draw: <strong style="color:gold">14.45%</strong><br>
+          🇧🇷 Brazil win: <strong style="color:gold">23.76%</strong><br>
+          <span style="font-size:11px;color:#94a3b8">→ Reflects Germany's historical dominance</span>
+        </div>
+      </div>
+    </div>
+    <div class="sbox">
+      <span class="vtag">🎙 Male Voice · Read aloud</span>
+      <span class="dir">👉 SWITCH to Streamlit app at http://localhost:8501 — show it live on screen!</span>
+      "Here is the <strong>Soccer 2026 Match Predictor</strong> running live.
+      Brazil vs Argentina — neutral venue, World Cup setting.
+      The model: Brazil <strong>39.75%</strong>, Draw <strong>20.87%</strong>,
+      Argentina <strong>39.38%</strong>. A statistical coin toss — exactly right
+      for one of football's greatest rivalries.
+      <br><br>
+      Germany vs Brazil — Germany at <strong>61.78%</strong>.
+      One hundred and fifty years of data confirms Germany's historical edge.
+      Every probability comes from <strong>real statistics</strong>,
+      generated by IBM Bob-powered code."
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     SLIDE 7 — CLOSING
+════════════════════════════════════════ -->
+<section class="slide" id="s7">
+  <div class="cnt cnt-center">
+    <div class="badge bk-gold" style="margin:0 auto 16px">⏱ 2:40 – 3:00 · Slide 7 of 7 — Closing</div>
+    <div class="h1" style="text-align:center;font-size:clamp(24px,5vw,52px)">
+      IBM Bob<br><em>Democratises AI for Everyone</em>
+    </div>
+    <div class="sbox" style="text-align:left;max-width:720px;margin:0 auto 18px">
+      <span class="vtag">🎙 Male Voice · Read aloud</span>
+      <span class="dir">👉 Return to camera. Smile. Strong, warm, confident finish.</span>
+      "What makes this project truly special is what it <em>represents</em>.
+      <br><br>
+      <strong>IBM Bob made it possible</strong> for someone without deep coding experience
+      to build a real, production-quality machine learning application —
+      from raw data to a live web app — in under 90 minutes.
+      <br><br>
+      You describe what you want. <strong>Bob builds it.</strong>
+      You learn every step of the way.
+      <br><br>
+      The full project is on my GitHub, built 100% with IBM Bob as part of the
+      <em>IBM SkillsBuild AI Builders Challenge 2025</em>.
+      <br><br>
+      Thank you for watching. Let's predict the 2026 World Cup winner —
+      <em>may the best data win!</em> ⚽"
+    </div>
+    <div style="font-size:15px;font-weight:900;color:gold;margin-bottom:6px">samted42</div>
+    <div style="font-size:13px;opacity:.7">IBM SkillsBuild AI Builders Challenge 2025 · Built with IBM Bob</div>
+    <div style="margin-top:16px;font-size:12px;color:#fcd34d;opacity:.75">
+      ⏹ Stop recording here · Upload to Loom · Paste link in IBM Challenge submission
+    </div>
+  </div>
+</section>
+
+<!-- ════════ NAV BUTTONS (one set per slide state) ════════ -->
+
+<!-- Slide 1 nav -->
+<div class="nav" id="nav1" style="display:flex">
+  <a href="#s2" class="prim">NEXT ▶</a>
+</div>
+<!-- Slide 2 nav -->
+<div class="nav" id="nav2" style="display:none">
+  <a href="#s1">◀ PREV</a>
+  <a href="#s3" class="prim">NEXT ▶</a>
+</div>
+<!-- Slide 3 nav -->
+<div class="nav" id="nav3" style="display:none">
+  <a href="#s2">◀ PREV</a>
+  <a href="#s4" class="prim">NEXT ▶</a>
+</div>
+<!-- Slide 4 nav -->
+<div class="nav" id="nav4" style="display:none">
+  <a href="#s3">◀ PREV</a>
+  <a href="#s5" class="prim">NEXT ▶</a>
+</div>
+<!-- Slide 5 nav -->
+<div class="nav" id="nav5" style="display:none">
+  <a href="#s4">◀ PREV</a>
+  <a href="#s6" class="prim">NEXT ▶</a>
+</div>
+<!-- Slide 6 nav -->
+<div class="nav" id="nav6" style="display:none">
+  <a href="#s5">◀ PREV</a>
+  <a href="#s7" class="prim">NEXT ▶</a>
+</div>
+<!-- Slide 7 nav -->
+<div class="nav" id="nav7" style="display:none">
+  <a href="#s6">◀ PREV</a>
+  <a href="#s1" class="prim" style="background:#15803d;border-color:#16a34a">↩ Start Over</a>
+</div>
+
+<!-- ════════ DOT ROWS (one per slide) ════════ -->
+<div class="dotrow" id="dot1">
+  <a href="#s1" class="on" title="1"></a>
+  <a href="#s2" title="2"></a><a href="#s3" title="3"></a>
+  <a href="#s4" title="4"></a><a href="#s5" title="5"></a>
+  <a href="#s6" title="6"></a><a href="#s7" title="7"></a>
+</div>
+<div class="dotrow" id="dot2" style="display:none">
+  <a href="#s1" title="1"></a><a href="#s2" class="on" title="2"></a>
+  <a href="#s3" title="3"></a><a href="#s4" title="4"></a>
+  <a href="#s5" title="5"></a><a href="#s6" title="6"></a><a href="#s7" title="7"></a>
+</div>
+<div class="dotrow" id="dot3" style="display:none">
+  <a href="#s1" title="1"></a><a href="#s2" title="2"></a>
+  <a href="#s3" class="on" title="3"></a><a href="#s4" title="4"></a>
+  <a href="#s5" title="5"></a><a href="#s6" title="6"></a><a href="#s7" title="7"></a>
+</div>
+<div class="dotrow" id="dot4" style="display:none">
+  <a href="#s1" title="1"></a><a href="#s2" title="2"></a><a href="#s3" title="3"></a>
+  <a href="#s4" class="on" title="4"></a><a href="#s5" title="5"></a>
+  <a href="#s6" title="6"></a><a href="#s7" title="7"></a>
+</div>
+<div class="dotrow" id="dot5" style="display:none">
+  <a href="#s1" title="1"></a><a href="#s2" title="2"></a>
+  <a href="#s3" title="3"></a><a href="#s4" title="4"></a>
+  <a href="#s5" class="on" title="5"></a><a href="#s6" title="6"></a><a href="#s7" title="7"></a>
+</div>
+<div class="dotrow" id="dot6" style="display:none">
+  <a href="#s1" title="1"></a><a href="#s2" title="2"></a>
+  <a href="#s3" title="3"></a><a href="#s4" title="4"></a>
+  <a href="#s5" title="5"></a><a href="#s6" class="on" title="6"></a><a href="#s7" title="7"></a>
+</div>
+<div class="dotrow" id="dot7" style="display:none">
+  <a href="#s1" title="1"></a><a href="#s2" title="2"></a>
+  <a href="#s3" title="3"></a><a href="#s4" title="4"></a>
+  <a href="#s5" title="5"></a><a href="#s6" title="6"></a>
+  <a href="#s7" class="on" title="7"></a>
+</div>
+
+<!-- ════════ CSS :target navigation engine ════════ -->
+<style>
+/* When a slide is targeted via #anchor, switch nav and dots */
+#s2:target~[id^="nav"] { display:none !important }
+#s2:target~#nav2       { display:flex !important }
+#s2:target~[id^="dot"] { display:none !important }
+#s2:target~#dot2       { display:flex !important }
+
+#s3:target~[id^="nav"] { display:none !important }
+#s3:target~#nav3       { display:flex !important }
+#s3:target~[id^="dot"] { display:none !important }
+#s3:target~#dot3       { display:flex !important }
+
+#s4:target~[id^="nav"] { display:none !important }
+#s4:target~#nav4       { display:flex !important }
+#s4:target~[id^="dot"] { display:none !important }
+#s4:target~#dot4       { display:flex !important }
+
+#s5:target~[id^="nav"] { display:none !important }
+#s5:target~#nav5       { display:flex !important }
+#s5:target~[id^="dot"] { display:none !important }
+#s5:target~#dot5       { display:flex !important }
+
+#s6:target~[id^="nav"] { display:none !important }
+#s6:target~#nav6       { display:flex !important }
+#s6:target~[id^="dot"] { display:none !important }
+#s6:target~#dot6       { display:flex !important }
+
+#s7:target~[id^="nav"] { display:none !important }
+#s7:target~#nav7       { display:flex !important }
+#s7:target~[id^="dot"] { display:none !important }
+#s7:target~#dot7       { display:flex !important }
+
+/* Slide visibility via :target */
+#s2:target { display:flex !important }
+#s3:target { display:flex !important }
+#s4:target { display:flex !important }
+#s5:target { display:flex !important }
+#s6:target { display:flex !important }
+#s7:target { display:flex !important }
+
+/* Hide slide 1 when any other slide is targeted */
+#s2:target~* #s1,
+#s3:target~* #s1,
+#s4:target~* #s1,
+#s5:target~* #s1,
+#s6:target~* #s1,
+#s7:target~* #s1 { display:none !important }
+
+/* Hide non-targeted slides */
+#s2:target~* #s3,#s2:target~* #s4,#s2:target~* #s5,#s2:target~* #s6,#s2:target~* #s7 { display:none !important }
+#s3:target~* #s2,#s3:target~* #s4,#s3:target~* #s5,#s3:target~* #s6,#s3:target~* #s7 { display:none !important }
+#s4:target~* #s2,#s4:target~* #s3,#s4:target~* #s5,#s4:target~* #s6,#s4:target~* #s7 { display:none !important }
+#s5:target~* #s2,#s5:target~* #s3,#s5:target~* #s4,#s5:target~* #s6,#s5:target~* #s7 { display:none !important }
+#s6:target~* #s2,#s6:target~* #s3,#s6:target~* #s4,#s6:target~* #s5,#s6:target~* #s7 { display:none !important }
+#s7:target~* #s2,#s7:target~* #s3,#s7:target~* #s4,#s7:target~* #s5,#s7:target~* #s6 { display:none !important }
+</style>
+
+</body>
+</html>
